@@ -542,6 +542,29 @@ static void _draw_grid()
 	}
 }
 
+/* Waits, with a message, until the terminal is big enough for the
+   layout; Q or Escape quits from there. */
+static void wait_for_room(void)
+{
+	while (LINES < LAYOUT_LINES || COLS < LAYOUT_COLS)
+	{
+		int key;
+		clear();
+		mvprintw(0, 0, "nudoku needs %dx%d, this is %dx%d.",
+				 LAYOUT_COLS, LAYOUT_LINES, COLS, LINES);
+		mvprintw(1, 0, "Make it bigger, or Q quits.");
+		refresh();
+		key = getch();
+		if (key == 'Q' || key == 27)
+		{
+			endwin();
+			exit(EXIT_SUCCESS);
+		}
+	}
+	clear();
+	refresh();
+}
+
 static void init_windows(void)
 {
 	keypad(stdscr, true);
@@ -763,6 +786,8 @@ int main(int argc, char *argv[])
 	}
 
 	init_curses();
+	keypad(stdscr, true);
+	wait_for_room();
 	init_windows();
 
 #ifdef DEBUG
@@ -868,16 +893,14 @@ int main(int argc, char *argv[])
 				run = false;
 				break;
 			case 'r':
-				redrawwin(grid);
-				redrawwin(infobox);
-				break;
 			case KEY_RESIZE:
-				/* make the windows again, centred in the new size */
+				/* make the windows again, centred in the (new) size;
+				   windows that no longer fit the screen are not redrawn
+				   safely by curses, so r does the same */
 				delwin(status);
 				delwin(grid);
 				delwin(infobox);
-				clear();
-				refresh();
+				wait_for_room();
 				init_windows();
 				/* the board being played, or the solution once it is
 				   solved (S) or the player's finished board (c) */
