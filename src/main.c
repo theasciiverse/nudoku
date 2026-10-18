@@ -24,7 +24,11 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 #include <unistd.h>				/* getopt */
 #include <sys/types.h>			/* stat type */
 #include <sys/stat.h>			/* stat function */
+#ifdef _WIN32
+#include <curses.h>				/* PDCurses */
+#else
 #include <ncurses.h>			/* ncurses */
+#endif
 #include <time.h>				/* time */
 #include <string.h>				/* strcmp, strlen */
 #include <locale.h>				/* setlocale */
