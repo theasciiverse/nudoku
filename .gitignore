@@ -27,3 +27,9 @@ po/
 !po/POTFILES.in
 !po/nudoku.pot
 !po/*.po
+
+# Asciiverse packaging
+out/
+stage/
+dist/
+__pycache__/
