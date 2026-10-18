@@ -91,6 +91,31 @@ static move_t	g_undo_stack[UNDO_STACK_SIZE];	/* Stack of previous moves */
 static int   g_undo_stack_index = 0;
 
 /* FUNCTIONS */
+#if ENABLE_NLS
+/* The translations: a locale folder beside the running program when there
+   is one (an unpacked archive, or av's install folder reached through a
+   symbolic link), otherwise the one configured at build time. */
+static const char *locale_directory(void)
+{
+	static char dir[4096];
+	struct stat st;
+	ssize_t n = readlink("/proc/self/exe", dir, sizeof(dir) - 16);
+	if (n > 0)
+	{
+		char *slash;
+		dir[n] = '\0';
+		slash = strrchr(dir, '/');
+		if (slash != NULL)
+		{
+			strcpy(slash + 1, "locale");
+			if (stat(dir, &st) == 0 && S_ISDIR(st.st_mode))
+				return dir;
+		}
+	}
+	return LOCALEDIR;
+}
+#endif
+
 static void print_version(void)
 {
 	printf("nudoku version " VERSION "\n\n\
@@ -660,7 +685,7 @@ int main(int argc, char *argv[])
 #if ENABLE_NLS
 	/* Set up internationalization */
 	setlocale(LC_ALL, "");
-	bindtextdomain(PACKAGE, LOCALEDIR);
+	bindtextdomain(PACKAGE, locale_directory());
 	textdomain(PACKAGE);
 #endif
 	bool run = true;
