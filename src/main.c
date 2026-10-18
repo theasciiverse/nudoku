@@ -39,7 +39,7 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 #define GRID_COLS				37
 #define GRID_Y					3
 #define GRID_X					3
-#define INFO_LINES				25
+#define INFO_LINES				21
 #define INFO_COLS				30
 #define INFO_Y					3
 #define INFO_X					GRID_X + GRID_COLS + 5
@@ -58,6 +58,9 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 #define COLOR_USER_HIGHLIGHT	6
 #define UNDO_STACK_SIZE			SUDOKU_LENGTH * 10 // arbitrary length. overflows shouldn't cause an error, just a limit in history length.
 #define STATE_FILE_NAME         "state.save"
+/* the whole layout, from the status line to the bottom of the help */
+#define LAYOUT_LINES			(INFO_Y + INFO_LINES)
+#define LAYOUT_COLS				(INFO_X + INFO_COLS)
 
 #ifdef DEBUG
 #define EXAMPLE_STREAM "4.....8.5.3..........7......2.....6.....8.4......1.......6.3.7.5..2.....1.4......"
@@ -87,6 +90,7 @@ static PAPER_SIZE g_pdfSize = PS_DEFAULT;	/* in case of -S we get the PDF paper 
 static bool  g_outIsPDF;
 static DIFFICULTY g_level = D_EASY;
 static WINDOW *grid, *infobox, *status;
+static int   g_offset_y = 0, g_offset_x = 0;	/* where the layout starts, to centre it */
 static move_t	g_undo_stack[UNDO_STACK_SIZE];	/* Stack of previous moves */
 static int   g_undo_stack_index = 0;
 
@@ -538,12 +542,16 @@ static void init_windows(void)
 {
 	keypad(stdscr, true);
 
-	status = newwin(STATUS_LINES, STATUS_COLS, STATUS_Y, STATUS_X);
+	/* centred in the terminal, or from the top left when it is smaller */
+	g_offset_y = LINES > LAYOUT_LINES ? (LINES - LAYOUT_LINES) / 2 : 0;
+	g_offset_x = COLS > LAYOUT_COLS ? (COLS - LAYOUT_COLS) / 2 : 0;
 
-	grid = newwin(GRID_LINES, GRID_COLS, GRID_Y, GRID_X);
+	status = newwin(STATUS_LINES, STATUS_COLS, STATUS_Y + g_offset_y, STATUS_X + g_offset_x);
+
+	grid = newwin(GRID_LINES, GRID_COLS, GRID_Y + g_offset_y, GRID_X + g_offset_x);
 	_draw_grid();
 
-	infobox = newwin(INFO_LINES, INFO_COLS, INFO_Y, INFO_X);
+	infobox = newwin(INFO_LINES, INFO_COLS, INFO_Y + g_offset_y, INFO_X + g_offset_x);
 	if (g_useColor)
 	{
 		wbkgd(infobox, COLOR_PAIR(2));
@@ -856,9 +864,23 @@ int main(int argc, char *argv[])
 				run = false;
 				break;
 			case 'r':
-			case KEY_RESIZE:
 				redrawwin(grid);
 				redrawwin(infobox);
+				break;
+			case KEY_RESIZE:
+				/* make the windows again, centred in the new size */
+				delwin(status);
+				delwin(grid);
+				delwin(infobox);
+				clear();
+				refresh();
+				init_windows();
+				/* the board being played, or the solution once it is
+				   solved (S) or the player's finished board (c) */
+				if (g_playing || strchr(plain_board, '.') != NULL)
+					fill_grid(user_board, plain_board, x, y);
+				else
+					fill_grid(plain_board, plain_board, x, y);
 				break;
 			case 'S':
 				if(g_playing)
