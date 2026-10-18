@@ -176,10 +176,47 @@ static bool is_valid_stream(char *s)
 	return true;
 }
 
+/* Creates a folder and any missing parents. */
+static void make_directories(const char *path)
+{
+	char buf[4096];
+	char *p;
+	struct stat st;
+
+	if (strlen(path) >= sizeof(buf))
+		return;
+	strcpy(buf, path);
+	for (p = buf + 1; *p; p++)
+	{
+		if (*p == '/' || *p == '\\')
+		{
+			char c = *p;
+			*p = '\0';
+			if (stat(buf, &st) == -1)
+#ifdef _WIN32
+				mkdir(buf);
+#else
+				mkdir(buf, 0700);
+#endif
+			*p = c;
+		}
+	}
+}
+
 char* get_saved_file_path(void)
 {
 	char* home_path = getenv("XDG_STATE_HOME");
 	char* fallback_path = NULL;
+
+	/* an empty or relative XDG_STATE_HOME counts as unset (XDG spec) */
+	if (home_path != NULL && home_path[0] != '/')
+		home_path = NULL;
+
+#ifdef _WIN32
+	/* no XDG folders or HOME on Windows: the local application data */
+	if (home_path == NULL)
+		home_path = getenv("LOCALAPPDATA");
+#endif
 
 	if (home_path == NULL)
 	{
@@ -210,9 +247,7 @@ char* get_saved_file_path(void)
 	strcpy(dir_path, home_path);
 	strcat(dir_path, dir_name);
 
-	struct stat st = {0};
-	if (stat(dir_path, &st) == -1)
-		mkdir(dir_path, 0700);
+	make_directories(dir_path);
 
 	const char* file_name = STATE_FILE_NAME;
 	size_t len_file = strlen(file_name);
@@ -243,6 +278,8 @@ bool get_board_save(char user_board[], char plain_board[])
 	char tmp_board[STREAM_LENGTH];
 
 	char* file_path = get_saved_file_path();
+	if (file_path == NULL)
+		return false;
 	FILE* fp = fopen(file_path, "r");
 	unlink(file_path);
 	free(file_path);
@@ -286,6 +323,8 @@ bool get_board_save(char user_board[], char plain_board[])
 bool save_stream(char user_board[], char plain_board[], int n)
 {
 	char* file_path = get_saved_file_path();
+	if (file_path == NULL)
+		return false;
 	FILE* fp = fopen(file_path, "w");
 	free(file_path);
 
