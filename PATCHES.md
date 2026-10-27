@@ -85,3 +85,9 @@ PDCurses 3.9 and run under Wine (moves, a hint, a save to
 `%LOCALAPPDATA%\nudoku\state.save`, Q); Wine's console showed the box
 lines as `?` and did not pass the resize on, so both are unchecked on
 real Windows. macOS: not built here.
+
+## Ours
+
+- **How to play it, at the top of README.md.** A short note on installing and
+  starting it with av, or from a release archive; the original text follows
+  unchanged.
